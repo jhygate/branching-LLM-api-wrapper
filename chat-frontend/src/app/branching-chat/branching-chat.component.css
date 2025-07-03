@@ -491,3 +491,15 @@
 .new-root-btn:hover {
   background: #218838 !important;
 }
+.message-content a {
+  color: #0066cc !important;
+  text-decoration: underline !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+.message-content a:hover {
+  color: #004499 !important;
+  text-decoration: none !important;
+}
+

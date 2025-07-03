@@ -23,7 +23,7 @@ def chat():
     try:
         client = openai.OpenAI(api_key=openai_api_key)
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o",
             messages=full_messages,
             stream=False
         )

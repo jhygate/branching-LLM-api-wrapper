@@ -361,10 +361,22 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
   }
 
   formatMessage(content: string): SafeHtml {
+    // Configure marked to properly handle links
+    marked.setOptions({
+      breaks: true,
+      gfm: true
+    });
+    
     // Use marked to parse markdown, then sanitize
-    // Use parseSync if available, otherwise parse
     const html = (marked as any).parseSync ? (marked as any).parseSync(content) : marked.parse(content);
-    return this.sanitizer.bypassSecurityTrustHtml(html);
+    
+    // Ensure links open in new tab and are properly styled
+    const processedHtml = html.replace(
+      /<a\s+href=/gi, 
+      '<a target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;" href='
+    );
+    
+    return this.sanitizer.bypassSecurityTrustHtml(processedHtml);
   }
 
   escapeHtml(text: string): string {
