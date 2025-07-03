@@ -1,0 +1,10 @@
+[
+  {
+    "role": "user",
+    "content": "give me 5 bullet points on things to learn in pytohn"
+  },
+  {
+    "role": "assistant",
+    "content": "1. Basic syntax and structure of Python programming language\n2. Data structures and types in Python (e.g. lists, dictionaries, tuples, strings)\n3. Control flow and looping structures (e.g. if statements, for loops, while loops)\n4. Functions and modules in Python (creating, calling, and importing)\n5. Error handling and debugging techniques in Python"
+  }
+]

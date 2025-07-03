@@ -1,0 +1,10 @@
+[
+  {
+    "role": "user",
+    "content": "Name 3 tools to get good at product design from a software eng perspecitve"
+  },
+  {
+    "role": "assistant",
+    "content": "1. Sketch: Sketch is a popular design tool that allows software engineers to create user interfaces and prototypes quickly and efficiently. It has a simple and intuitive interface, making it easy for engineers to create mockups, wireframes, and designs for their products.\n\n2. Adobe XD: Adobe XD is another powerful tool for software engineers to design and prototype their products. It has features such as interactive prototypes, design systems, and collaboration tools, making it easy for engineers to bring their ideas to life and share them with their team.\n\n3. Figma: Figma is a cloud-based design tool that allows software engineers to collaborate in real-time on designs and prototypes. It has a wide range of features, including vector editing tools, prototyping capabilities, and design systems, making it a great tool for engineers looking to improve their product design skills."
+  }
+]

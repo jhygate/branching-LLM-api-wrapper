@@ -1,0 +1,10 @@
+[
+  {
+    "role": "user",
+    "content": "give me seom code"
+  },
+  {
+    "role": "assistant",
+    "content": "Sure, here is a simple code snippet in Python:\n\n```\nprint(\"Hello, World!\")\n``` \n\nThis code will print out the message \"Hello, World!\" to the console when executed."
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "role": "user",
+    "content": "test"
+  },
+  {
+    "role": "assistant",
+    "content": "Hello! How can I assist you today?"
+  },
+  {
+    "role": "user",
+    "content": "okay"
+  },
+  {
+    "role": "assistant",
+    "content": "Great! Is there anything specific you'd like to know or talk about?"
+  }
+]

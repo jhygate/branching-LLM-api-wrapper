@@ -1,0 +1,10 @@
+[
+  {
+    "role": "user",
+    "content": "Give me some code examples for bullet point 2"
+  },
+  {
+    "role": "assistant",
+    "content": "Sure! Here are some code examples for bullet point 2 on functions and modules in Python:\n\n1. Defining and calling a simple function:\n```python\ndef greet(name):\n    print(\"Hello, \" + name + \"!\")\n\ngreet(\"Alice\")\n```\n\n2. Importing and using modules:\nCreate a separate file named `my_module.py` with the following code:\n```python\ndef double(number):\n    return number * 2\n```\n\nIn your main Python script, import the module and use the `double` function:\n```python\nimport my_module\n\nresult = my_module.double(5)\nprint(result)\n```\n\n3. Using built-in modules:\n```python\nimport math\n\nprint(math.pi)\nprint(math.sqrt(25))\n```\n\nThese code examples demonstrate defining and calling functions, as well as importing and using both custom and built-in modules in Python."
+  }
+]
