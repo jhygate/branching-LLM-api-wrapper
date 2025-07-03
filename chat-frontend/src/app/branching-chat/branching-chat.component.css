@@ -483,3 +483,11 @@
 * {
   user-select: text !important;
 }
+
+.new-root-btn {
+  background: #28a745 !important;
+}
+
+.new-root-btn:hover {
+  background: #218838 !important;
+}

@@ -186,7 +186,7 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
     // Add the current node's previous messages (not the just-added one)
     context.push(...node.messages.slice(0, -1));
 
-    this.http.post<any>(`${this.apiUrl}/chat/${node.id}`, { message, context }).subscribe({
+    this.http.post<any>(`${this.apiUrl}/chat`, { message, context }).subscribe({
       next: (response) => {
         node.messages.push({ role: 'assistant', content: response.response });
         node.loading = false;
@@ -491,5 +491,37 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
     reader.readAsText(file);
     // Reset the input so the same file can be loaded again if needed
     input.value = '';
+  }
+
+  createNewRoot() {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const rootId = this.generateId();
+    
+    // Calculate the center of the current view
+    const viewCenterX = (-this.canvasOffset.x + vw / 2) / this.zoom;
+    const viewCenterY = (-this.canvasOffset.y + vh / 2) / this.zoom;
+    
+    const newRoot: ChatNode = {
+      id: rootId,
+      messages: [],
+      children: [],
+      input: '',
+      loading: false,
+      active: true,
+      x: viewCenterX - 180, // Center the node (half of width)
+      y: viewCenterY - 90,  // Center the node (half of height)
+      width: 360,
+      height: 180
+    };
+    
+    this.nodes[rootId] = newRoot;
+    
+    // If this is the first root, set it as the main root
+    if (!this.rootNode) {
+      this.rootNode = newRoot;
+    }
+    
+    this.cdr.detectChanges();
   }
 }
