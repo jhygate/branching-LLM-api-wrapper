@@ -85,7 +85,7 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
   ) {}
 
   ngOnInit() {
-    this.createNewChat();
+    this.restoreFromSession();
     document.addEventListener('mousedown', this.handleGlobalClick, true);
   }
 
@@ -196,6 +196,8 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
         node.loading = false;
       }
     });
+
+    this.saveToSession();
   }
 
   branch(node: ChatNode) {
@@ -221,6 +223,8 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
     this.nodes[child.id] = child;
     node.active = false; // parent becomes readonly
     this.cdr.detectChanges();
+
+    this.saveToSession();
   }
 
   zoomIn() {
@@ -233,6 +237,8 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
       this.canvasOffset.x = centerX - canvasX * this.zoom;
       this.canvasOffset.y = centerY - canvasY * this.zoom;
     }
+
+    this.saveToSession();
   }
 
   zoomOut() {
@@ -245,6 +251,8 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
       this.canvasOffset.x = centerX - canvasX * this.zoom;
       this.canvasOffset.y = centerY - canvasY * this.zoom;
     }
+
+    this.saveToSession();
   }
 
   onMouseDown(event: MouseEvent) {
@@ -265,6 +273,7 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
 
   onMouseUp() {
     this.isDragging = false;
+    this.saveToSession();
   }
 
   onWheel(event: WheelEvent) {
@@ -303,6 +312,7 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
     document.body.classList.remove('dragging-node');
     window.removeEventListener('mousemove', this.onNodeMouseMove);
     window.removeEventListener('mouseup', this.onNodeMouseUp);
+    this.saveToSession();
   };
 
   onResizeMouseDown(event: MouseEvent, node: ChatNode) {
@@ -333,6 +343,7 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
     this.resizingNode = null;
     window.removeEventListener('mousemove', this.onResizeMouseMove);
     window.removeEventListener('mouseup', this.onResizeMouseUp);
+    this.saveToSession();
   };
 
   startEditing(node: ChatNode) {
@@ -352,6 +363,7 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
       this.editingNode.title = this.editingName;
       this.editingNode = null;
       this.editingName = '';
+      this.saveToSession();
     }
   }
 
@@ -420,6 +432,8 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
     if (!window.confirm('Delete this node and all its children?')) return;
     this.removeNodeAndChildren(node);
     this.cdr.detectChanges();
+
+    this.saveToSession();
   }
 
   removeNodeAndChildren(node: ChatNode) {
@@ -436,6 +450,8 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
     if (this.rootNode && this.rootNode.id === node.id) {
       this.rootNode = null;
     }
+
+    this.saveToSession();
   }
 
   saveCanvas() {
@@ -462,6 +478,8 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
     a.download = fileName;
     a.click();
     URL.revokeObjectURL(url);
+
+    this.saveToSession();
   }
 
   loadCanvas(event: Event) {
@@ -493,9 +511,15 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
         }
         this.nodes = loadedNodes;
         this.rootNode = data.rootNodeId ? this.nodes[data.rootNodeId] : null;
-        this.canvasOffset = data.canvasOffset || { x: 0, y: 0 };
-        this.zoom = data.zoom || 1;
+        // Only fit if no offset/zoom saved (backward compatibility)
+        if (data.canvasOffset && typeof data.canvasOffset.x === 'number' && typeof data.canvasOffset.y === 'number' && typeof data.zoom === 'number') {
+          this.canvasOffset = data.canvasOffset;
+          this.zoom = data.zoom;
+        } else {
+          this.fitCanvasToNodes();
+        }
         this.cdr.detectChanges();
+        this.saveToSession();
       } catch (err) {
         alert('Failed to load canvas: ' + err);
       }
@@ -535,5 +559,117 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
     }
     
     this.cdr.detectChanges();
+
+    this.saveToSession();
+  }
+
+  saveToSession() {
+    const nodesToSave: any = {};
+    for (const [id, node] of Object.entries(this.nodes)) {
+      nodesToSave[id] = {
+        ...node,
+        children: node.children.map(child => child.id),
+      };
+    }
+    const data = {
+      nodes: nodesToSave,
+      rootNodeId: this.rootNode?.id,
+      canvasOffset: this.canvasOffset,
+      zoom: this.zoom
+    };
+    sessionStorage.setItem('branching-chat-canvas', JSON.stringify(data));
+  }
+
+  restoreFromSession() {
+    const dataStr = sessionStorage.getItem('branching-chat-canvas');
+    if (!dataStr) return;
+    try {
+      const data = JSON.parse(dataStr);
+      const loadedNodes: { [key: string]: ChatNode } = {};
+      for (const [id, nodeData] of Object.entries<any>(data.nodes || {})) {
+        loadedNodes[id] = {
+          ...nodeData,
+          children: [],
+        };
+      }
+      for (const [id, nodeData] of Object.entries<any>(data.nodes || {})) {
+        if (Array.isArray(nodeData.children)) {
+          loadedNodes[id].children = nodeData.children.map((childId: string) => loadedNodes[childId]).filter(Boolean);
+          for (const childId of nodeData.children) {
+            if (loadedNodes[childId]) {
+              loadedNodes[childId].parentId = id;
+            }
+          }
+        }
+      }
+      this.nodes = loadedNodes;
+      this.rootNode = data.rootNodeId ? this.nodes[data.rootNodeId] : null;
+      // Only fit if no offset/zoom saved (backward compatibility)
+      if (data.canvasOffset && typeof data.canvasOffset.x === 'number' && typeof data.canvasOffset.y === 'number' && typeof data.zoom === 'number') {
+        this.canvasOffset = data.canvasOffset;
+        this.zoom = data.zoom;
+      } else {
+        this.fitCanvasToNodes();
+      }
+      this.cdr.detectChanges();
+    } catch (err) {
+      // Ignore errors
+    }
+  }
+
+  newCanvas() {
+    this.nodes = {};
+    this.rootNode = null;
+    this.canvasOffset = { x: 0, y: 0 };
+    this.zoom = 1;
+    sessionStorage.removeItem('branching-chat-canvas');
+    this.createNewRoot();
+    this.cdr.detectChanges();
+    this.saveToSession();
+  }
+
+  fitCanvasToNodes() {
+    const nodes = Object.values(this.nodes);
+    if (nodes.length === 0) return;
+
+    // Calculate bounding box of all nodes
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const node of nodes) {
+      minX = Math.min(minX, node.x);
+      minY = Math.min(minY, node.y);
+      maxX = Math.max(maxX, node.x + node.width);
+      maxY = Math.max(maxY, node.y + node.height);
+    }
+
+    // Add some padding
+    const padding = 60;
+    minX -= padding;
+    minY -= padding;
+    maxX += padding;
+    maxY += padding;
+
+    // Calculate scale to fit
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const nodesWidth = maxX - minX;
+    const nodesHeight = maxY - minY;
+
+    const scaleX = viewportWidth / nodesWidth;
+    const scaleY = viewportHeight / nodesHeight;
+    const newZoom = Math.min(scaleX, scaleY, this.maxZoom);
+
+    // Center the bounding box in the viewport
+    const offsetX = (viewportWidth - nodesWidth * newZoom) / 2 - minX * newZoom;
+    const offsetY = (viewportHeight - nodesHeight * newZoom) / 2 - minY * newZoom;
+
+    this.zoom = newZoom;
+    this.canvasOffset.x = offsetX;
+    this.canvasOffset.y = offsetY;
+  }
+
+  centerAll() {
+    this.fitCanvasToNodes();
+    this.cdr.detectChanges();
+    this.saveToSession();
   }
 }
