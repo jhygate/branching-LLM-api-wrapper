@@ -4,11 +4,11 @@
     <option value="openai">OpenAI</option>
     <option value="gemini">Gemini</option>
   </select>
-  <ng-container *ngIf="provider === 'openai'">
+  @if (provider === 'openai') {
     <label for="apiKeyInput">OpenAI API Key:</label>
     <input id="apiKeyInput" [type]="showKey ? 'text' : 'password'" [(ngModel)]="apiKey" (ngModelChange)="setApiKey($event)" style="width:320px;" placeholder="sk-..." />
-  </ng-container>
-  <ng-container *ngIf="provider === 'gemini'">
+  }
+  @if (provider === 'gemini') {
     <label for="geminiKeyInput">Gemini API Key:</label>
     <input id="geminiKeyInput" [type]="showKey ? 'text' : 'password'" [(ngModel)]="geminiApiKey" (ngModelChange)="setGeminiApiKey($event)" style="width:320px;" placeholder="AIza..." />
     <label for="geminiVersionSelect">API Version:</label>
@@ -23,11 +23,17 @@
       <option value="gemini-1.0-pro">gemini-1.0-pro</option>
       <option value="custom">Custom...</option>
     </select>
-    <input *ngIf="geminiModel === 'custom'" type="text" style="width:220px;" placeholder="Enter model name" (input)="setGeminiModel($any($event.target).value)" />
-  </ng-container>
+    @if (geminiModel === 'custom') {
+      <input type="text" style="width:220px;" placeholder="Enter model name" (input)="setGeminiModel($any($event.target).value)" />
+    }
+  }
   <button type="button" (click)="showKey = !showKey">{{ showKey ? 'Hide' : 'Show' }}</button>
-  <span *ngIf="provider === 'openai' && !apiKey" style="color:#c00;font-weight:bold;">Please enter your OpenAI API key to use chat.</span>
-  <span *ngIf="provider === 'gemini' && !geminiApiKey" style="color:#c00;font-weight:bold;">Please enter your Gemini API key to use chat.</span>
+  @if (provider === 'openai' && !apiKey) {
+    <span style="color:#c00;font-weight:bold;">Please enter your OpenAI API key to use chat.</span>
+  }
+  @if (provider === 'gemini' && !geminiApiKey) {
+    <span style="color:#c00;font-weight:bold;">Please enter your Gemini API key to use chat.</span>
+  }
 </div>
 <div class="branching-chat-container" [style.marginTop.px]="48">
   <!-- Save/Load Controls -->
@@ -72,8 +78,8 @@
         </marker>
       </defs>
       <g>
-        <ng-container *ngFor="let node of getAllNodes()">
-          <ng-container *ngFor="let child of node.children">
+        @for (node of getAllNodes(); track node.id) {
+          @for (child of node.children; track child.id) {
             <path
               [attr.d]="
                 'M ' + (node.x + node.width / 2) + ' ' + (node.y + node.height) +
@@ -85,81 +91,88 @@
               stroke-width="2"
               fill="none"
               marker-end="url(#arrowhead)" />
-          </ng-container>
-        </ng-container>
+          }
+        }
       </g>
     </svg>
 
     <!-- Chat Nodes -->
-    <div 
-      *ngFor="let node of getAllNodes()"
-      class="chat-node"
-      [class.active]="node.active"
-      [class.loading]="node.loading"
-      [class.root-debug]="node.id === rootNode?.id"
-      [style.left.px]="node.x"
-      [style.top.px]="node.y"
-      [style.width.px]="node.width"
-      [style.height.px]="node.height">
-      
-      <!-- Drag Handle -->
-      <div class="drag-handle" (mousedown)="onNodeMouseDown($event, node)">
-        <div class="node-title" 
-             *ngIf="!editingNode || editingNode.id !== node.id"
-             (dblclick)="startEditing(node)"
-             [style.fontSize.px]="20 / zoom">
-          {{ node.title || 'Chat ' + node.id.slice(0, 8) }}
-        </div>
-        <input 
-          *ngIf="editingNode && editingNode.id === node.id"
-          class="title-input"
-          [value]="editingName"
-          (input)="onTitleInput($event)"
-          (blur)="finishEditing()"
-          (keyup.enter)="finishEditing()"
-          (keyup.escape)="cancelEditing()"
-          #titleInput
-          autofocus
-          [style.fontSize.px]="20 / zoom">
-        <div class="node-actions">
-          <button class="action-btn" (click)="branch(node)" [disabled]="node.loading" title="Branch Chat">🌿</button>
-          <button class="action-btn" (click)="startEditing(node)" title="Edit Name">✏️</button>
-          <button class="action-btn delete-btn" (click)="deleteNode(node)" title="Delete Node">🗑️</button>
-        </div>
-      </div>
-
-      <!-- Chat Content -->
-      <div class="chat-content">
-        <div class="messages" #messagesContainer>
-          <div *ngFor="let message of node.messages" class="message" [class.user]="message.role === 'user'">
-            <div class="message-content" [innerHTML]="formatMessage(message.content)"></div>
-          </div>
-          <div *ngIf="node.loading" class="message assistant">
-            <div class="message-content">
-              <span class="typing-indicator">●</span>
-            </div>
-          </div>
-        </div>
+    @for (node of getAllNodes(); track node.id) {
+      <div 
+        class="chat-node"
+        [class.active]="node.active"
+        [class.loading]="node.loading"
+        [class.root-debug]="node.id === rootNode?.id"
+        [style.left.px]="node.x"
+        [style.top.px]="node.y"
+        [style.width.px]="node.width"
+        [style.height.px]="node.height">
         
-        <!-- Input Area -->
-        <div class="input-area">
-          <textarea 
-            [(ngModel)]="node.input"
-            (keydown.enter)="sendMessage(node, $event)"
-            placeholder="Type your message..."
-            [disabled]="!node.active || node.loading"
-            rows="2">
-          </textarea>
-          <button 
-            (click)="sendMessage(node)"
-            [disabled]="!node.input.trim() || !node.active || node.loading">
-            Send
-          </button>
+        <!-- Drag Handle -->
+        <div class="drag-handle" (mousedown)="onNodeMouseDown($event, node)">
+          @if (!editingNode || editingNode.id !== node.id) {
+            <div class="node-title" 
+                 (dblclick)="startEditing(node)"
+                 [style.fontSize.px]="20 / zoom">
+              {{ node.title || 'Chat ' + node.id.slice(0, 8) }}
+            </div>
+          }
+          @if (editingNode && editingNode.id === node.id) {
+            <input 
+              class="title-input"
+              [value]="editingName"
+              (input)="onTitleInput($event)"
+              (blur)="finishEditing()"
+              (keyup.enter)="finishEditing()"
+              (keyup.escape)="cancelEditing()"
+              #titleInput
+              autofocus
+              [style.fontSize.px]="20 / zoom">
+          }
+          <div class="node-actions">
+            <button class="action-btn" (click)="branch(node)" [disabled]="node.loading" title="Branch Chat">🌿</button>
+            <button class="action-btn" (click)="startEditing(node)" title="Edit Name">✏️</button>
+            <button class="action-btn delete-btn" (click)="deleteNode(node)" title="Delete Node">🗑️</button>
+          </div>
         </div>
-      </div>
 
-      <!-- Resize Handle -->
-      <div class="resize-handle" (mousedown)="onResizeMouseDown($event, node)"></div>
-    </div>
+        <!-- Chat Content -->
+        <div class="chat-content">
+          <div class="messages" #messagesContainer>
+            @for (message of node.messages; track $index) {
+              <div class="message" [class.user]="message.role === 'user'">
+                <div class="message-content" [innerHTML]="formatMessage(message.content)"></div>
+              </div>
+            }
+            @if (node.loading) {
+              <div class="message assistant">
+                <div class="message-content">
+                  <span class="typing-indicator">●</span>
+                </div>
+              </div>
+            }
+          </div>
+          
+          <!-- Input Area -->
+          <div class="input-area">
+            <textarea 
+              [(ngModel)]="node.input"
+              (keydown.enter)="sendMessage(node, $event)"
+              placeholder="Type your message..."
+              [disabled]="!node.active || node.loading"
+              rows="2">
+            </textarea>
+            <button 
+              (click)="sendMessage(node)"
+              [disabled]="!node.input.trim() || !node.active || node.loading">
+              Send
+            </button>
+          </div>
+        </div>
+
+        <!-- Resize Handle -->
+        <div class="resize-handle" (mousedown)="onResizeMouseDown($event, node)"></div>
+      </div>
+    }
   </div>
 </div>
