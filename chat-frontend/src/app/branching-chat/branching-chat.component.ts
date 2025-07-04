@@ -82,6 +82,8 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
   isMiddlePanning = false;
   middlePanStart = { x: 0, y: 0 };
   middlePanOffsetStart = { x: 0, y: 0 };
+  apiKey: string = '';
+  showKey = false;
 
   constructor(
     private http: HttpClient,
@@ -100,6 +102,11 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
       this.zoom = 1;
     }
     this.restoreFromSession();
+    // Load API key from sessionStorage if present
+    const savedKey = sessionStorage.getItem('openai-api-key');
+    if (savedKey) {
+      this.apiKey = savedKey;
+    }
     document.addEventListener('mousedown', this.handleGlobalClick, true);
   }
 
@@ -166,17 +173,23 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
     }
   }
 
-  sendMessage(node: ChatNode, event?: Event) {
+  setApiKey(key: string) {
+    this.apiKey = key;
+    sessionStorage.setItem('openai-api-key', key);
+  }
+
+  async sendMessage(node: ChatNode, event?: Event) {
     if (event && event instanceof KeyboardEvent && event.shiftKey) return;
     if (event) event.preventDefault();
-    
     if (!node.input.trim() || !node.active || node.loading) return;
-    
+    if (!this.apiKey) {
+      node.messages.push({ role: 'assistant', content: 'Please enter your OpenAI API key.' });
+      return;
+    }
     const message = node.input.trim();
     node.messages.push({ role: 'user', content: message });
     node.input = '';
     node.loading = true;
-
     // Gather context: all ancestor names and messages up to root
     const context: { role: string; content: string }[] = [];
     let current: ChatNode | undefined = node;
@@ -185,7 +198,6 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
       ancestors.unshift(current);
       current = current.parentId ? this.nodes[current.parentId] : undefined;
     }
-    // For each ancestor (except the current node), add its name as a system message and its messages
     for (let i = 0; i < ancestors.length - 1; i++) {
       const ancestor = ancestors[i];
       if (ancestor.title) {
@@ -193,20 +205,36 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
       }
       context.push(...ancestor.messages);
     }
-    // Add the current node's previous messages (not the just-added one)
     context.push(...node.messages.slice(0, -1));
-
-    this.http.post<any>(`${this.apiUrl}/chat`, { message, context }).subscribe({
-      next: (response) => {
-        node.messages.push({ role: 'assistant', content: response.response });
-        node.loading = false;
-      },
-      error: (err) => {
-        node.messages.push({ role: 'assistant', content: 'Error: ' + (err.error?.error || 'Unknown error') });
-        node.loading = false;
+    // Compose OpenAI API call
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            ...context,
+            { role: 'user', content: message }
+          ],
+          temperature: 0.7
+        })
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error?.message || response.statusText);
       }
-    });
-
+      const data = await response.json();
+      const reply = data.choices?.[0]?.message?.content || '[No response]';
+      node.messages.push({ role: 'assistant', content: reply });
+      node.loading = false;
+    } catch (err: any) {
+      node.messages.push({ role: 'assistant', content: 'Error: ' + (err.message || 'Unknown error') });
+      node.loading = false;
+    }
     this.saveToSession();
   }
 
