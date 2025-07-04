@@ -285,7 +285,32 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
   }
 
   onWheel(event: WheelEvent) {
-    event.preventDefault();
+    if (event.metaKey) { // Cmd (Mac) pressed
+      event.preventDefault();
+      const oldZoom = this.zoom;
+      let newZoom = this.zoom;
+      const zoomStep = 0.03;
+      if (event.deltaY < 0) {
+        newZoom = Math.min(this.maxZoom, this.zoom + zoomStep);
+      } else if (event.deltaY > 0) {
+        newZoom = Math.max(this.minZoom, this.zoom - zoomStep);
+      }
+      if (newZoom !== oldZoom) {
+        // Zoom centered on mouse pointer (viewport coordinates)
+        const mouseX = event.clientX;
+        const mouseY = event.clientY;
+        // Canvas coordinates under mouse before zoom
+        const canvasX = (mouseX - this.canvasOffset.x) / oldZoom;
+        const canvasY = (mouseY - this.canvasOffset.y) / oldZoom;
+        // Update zoom
+        this.zoom = newZoom;
+        // Adjust offset so the canvas point under the mouse stays fixed
+        this.canvasOffset.x = mouseX - canvasX * newZoom;
+        this.canvasOffset.y = mouseY - canvasY * newZoom;
+        this.saveToSession();
+      }
+    }
+    // If metaKey not pressed, do nothing (allow default scroll/pan)
   }
 
   onNodeMouseDown(event: MouseEvent, node: ChatNode) {
