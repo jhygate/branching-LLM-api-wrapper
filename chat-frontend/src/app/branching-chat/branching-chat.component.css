@@ -26,6 +26,7 @@
   transition: border-color 0.2s ease;
   cursor: default;
   pointer-events: auto;
+  border: 2px solid red !important;
 }
 
 .chat-node:active {
@@ -193,10 +194,11 @@
   position: relative;
   width: 100vw;
   height: 100vh;
-  overflow: auto;
+  overflow: visible;
   background: #f5f5f5;
   margin: 0;
   padding: 0;
+  z-index: 1000;
 }
 
 .zoom-controls {
@@ -247,13 +249,17 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 10000px;
-  height: 10000px;
+  width: 100000px;
+  height: 100000px;
   cursor: grab;
   user-select: none;
   margin: 0;
   padding: 0;
-  background: transparent;
+  background: yellow;
+  border: 6px solid blue;
+  background-image: repeating-radial-gradient(circle, #bbb 1px, transparent 2px 40px);
+  box-sizing: border-box;
+  z-index: 2;
 }
 
 .canvas:active {
@@ -501,5 +507,18 @@
 .message-content a:hover {
   color: #004499 !important;
   text-decoration: none !important;
+}
+
+.canvas-center-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 8px;
+  height: 8px;
+  background: red;
+  border-radius: 50%;
+  z-index: 100;
+  transform: translate(-4px, -4px);
+  pointer-events: none;
 }
 

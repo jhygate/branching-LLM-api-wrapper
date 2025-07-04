@@ -7,6 +7,7 @@ import javascript from 'highlight.js/lib/languages/javascript';
 import python from 'highlight.js/lib/languages/python';
 import typescript from 'highlight.js/lib/languages/typescript';
 import json from 'highlight.js/lib/languages/json';
+import bash from 'highlight.js/lib/languages/bash';
 import 'highlight.js/styles/github-dark.css';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { marked } from 'marked';
@@ -15,6 +16,8 @@ hljs.registerLanguage('javascript', javascript);
 hljs.registerLanguage('python', python);
 hljs.registerLanguage('typescript', typescript);
 hljs.registerLanguage('json', json);
+hljs.registerLanguage('bash', bash);
+hljs.registerLanguage('shell', bash);
 
 const renderer = {
   code({ text, lang }: { text: string, lang?: string }): string {
@@ -85,6 +88,14 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
   ) {}
 
   ngOnInit() {
+    // On first load, center canvas at (0,0)
+    if (Object.keys(this.nodes).length === 0) {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      this.canvasOffset.x = vw / 2;
+      this.canvasOffset.y = vh / 2;
+      this.zoom = 1;
+    }
     this.restoreFromSession();
     document.addEventListener('mousedown', this.handleGlobalClick, true);
   }
@@ -133,10 +144,6 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
     // Set initial offset so the root node is centered in the viewport
     this.canvasOffset.x = (vw / 2) - root.x - (root.width / 2);
     this.canvasOffset.y = (vh / 2) - root.y - (root.height / 2);
-    // Debug output
-    console.log('Root node created at:', root.x, root.y);
-    console.log('Initial canvas offset:', this.canvasOffset);
-    console.log('Viewport size:', vw, vh);
     setTimeout(() => {
       const canvas = document.querySelector('.canvas') as HTMLElement;
       if (canvas) {
@@ -219,6 +226,7 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
       width: defaultWidth,
       height: defaultHeight
     };
+    this.clampNodePosition(child);
     node.children.push(child);
     this.nodes[child.id] = child;
     node.active = false; // parent becomes readonly
@@ -303,6 +311,7 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
     if (this.dragging && this.draggedNode) {
       this.draggedNode.x = this.dragNodeStart.x + (event.clientX - this.dragStart.x) / this.zoom;
       this.draggedNode.y = this.dragNodeStart.y + (event.clientY - this.dragStart.y) / this.zoom;
+      this.clampNodePosition(this.draggedNode);
     }
   };
 
@@ -336,6 +345,7 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
       const minWidth = 200, minHeight = 100;
       this.resizingNode.width = Math.max(minWidth, this.resizeStart.width + dx);
       this.resizingNode.height = Math.max(minHeight, this.resizeStart.height + dy);
+      this.clampNodePosition(this.resizingNode);
     }
   };
 
@@ -399,9 +409,6 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
 
   getAllNodes(): ChatNode[] {
     const nodes = Object.values(this.nodes);
-    nodes.forEach(node => {
-      console.log('Rendering node', node.id, 'at', node.x, node.y);
-    });
     return nodes;
   }
 
@@ -533,11 +540,15 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const rootId = this.generateId();
-    
-    // Calculate the center of the current view
-    const viewCenterX = (-this.canvasOffset.x + vw / 2) / this.zoom;
-    const viewCenterY = (-this.canvasOffset.y + vh / 2) / this.zoom;
-    
+    // If no nodes, center canvas at (0,0)
+    if (Object.keys(this.nodes).length === 0) {
+      this.canvasOffset.x = vw / 2;
+      this.canvasOffset.y = vh / 2;
+      this.zoom = 1;
+    }
+    // Calculate the center of the current view in new coordinates (canvas centered at 0,0)
+    const viewCenterX = ((vw / 2 - this.canvasOffset.x) / this.zoom);
+    const viewCenterY = ((vh / 2 - this.canvasOffset.y) / this.zoom);
     const newRoot: ChatNode = {
       id: rootId,
       messages: [],
@@ -550,16 +561,13 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
       width: 360,
       height: 180
     };
-    
+    this.clampNodePosition(newRoot);
     this.nodes[rootId] = newRoot;
-    
     // If this is the first root, set it as the main root
     if (!this.rootNode) {
       this.rootNode = newRoot;
     }
-    
     this.cdr.detectChanges();
-
     this.saveToSession();
   }
 
@@ -630,7 +638,16 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
 
   fitCanvasToNodes() {
     const nodes = Object.values(this.nodes);
-    if (nodes.length === 0) return;
+    if (nodes.length === 0) {
+      // Center canvas at (0,0) if no nodes
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      this.canvasOffset.x = vw / 2;
+      this.canvasOffset.y = vh / 2;
+      this.zoom = 1;
+      this.cdr.detectChanges();
+      return;
+    }
 
     // Calculate bounding box of all nodes
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -648,28 +665,54 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
     maxX += padding;
     maxY += padding;
 
+    // Clamp bounding box to canvas limits
+    const canvasMin = -50000, canvasMax = 50000;
+    minX = Math.max(minX, canvasMin);
+    minY = Math.max(minY, canvasMin);
+    maxX = Math.min(maxX, canvasMax);
+    maxY = Math.min(maxY, canvasMax);
+
     // Calculate scale to fit
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    const nodesWidth = maxX - minX;
-    const nodesHeight = maxY - minY;
+    const nodesWidth = Math.max(1, maxX - minX);
+    const nodesHeight = Math.max(1, maxY - minY);
+
+    // If all nodes are at the same spot, center that spot and use zoom=1
+    if (nodesWidth === 1 && nodesHeight === 1) {
+      this.zoom = 1;
+      this.canvasOffset.x = viewportWidth / 2 - minX;
+      this.canvasOffset.y = viewportHeight / 2 - minY;
+      this.cdr.detectChanges();
+      return;
+    }
 
     const scaleX = viewportWidth / nodesWidth;
     const scaleY = viewportHeight / nodesHeight;
-    const newZoom = Math.min(scaleX, scaleY, this.maxZoom);
+    const newZoom = Math.max(this.minZoom, Math.min(scaleX, scaleY, this.maxZoom));
 
-    // Center the bounding box in the viewport
-    const offsetX = (viewportWidth - nodesWidth * newZoom) / 2 - minX * newZoom;
-    const offsetY = (viewportHeight - nodesHeight * newZoom) / 2 - minY * newZoom;
-
+    // Center the bounding box center in the viewport (canvas centered at 0,0)
+    const bboxCenterX = (minX + maxX) / 2;
+    const bboxCenterY = (minY + maxY) / 2;
     this.zoom = newZoom;
-    this.canvasOffset.x = offsetX;
-    this.canvasOffset.y = offsetY;
+    this.canvasOffset.x = viewportWidth / 2 - bboxCenterX * newZoom;
+    this.canvasOffset.y = viewportHeight / 2 - bboxCenterY * newZoom;
+    this.cdr.detectChanges();
   }
 
   centerAll() {
     this.fitCanvasToNodes();
     this.cdr.detectChanges();
     this.saveToSession();
+  }
+
+  // Helper to clamp node position within canvas (centered at 0,0)
+  clampNodePosition(node: ChatNode) {
+    const minX = -50000;
+    const maxX = 50000 - node.width;
+    const minY = -50000;
+    const maxY = 50000 - node.height;
+    node.x = Math.max(minX, Math.min(node.x, maxX));
+    node.y = Math.max(minY, Math.min(node.y, maxY));
   }
 }
