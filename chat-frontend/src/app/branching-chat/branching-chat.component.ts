@@ -79,6 +79,9 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
   maxZoom = 2;
   resizingNode: ChatNode | null = null;
   resizeStart = { x: 0, y: 0, width: 0, height: 0 };
+  isMiddlePanning = false;
+  middlePanStart = { x: 0, y: 0 };
+  middlePanOffsetStart = { x: 0, y: 0 };
 
   constructor(
     private http: HttpClient,
@@ -264,6 +267,16 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
   }
 
   onMouseDown(event: MouseEvent) {
+    // Middle mouse panning (anywhere)
+    if (event.button === 1) {
+      event.preventDefault();
+      this.isMiddlePanning = true;
+      this.middlePanStart = { x: event.clientX, y: event.clientY };
+      this.middlePanOffsetStart = { ...this.canvasOffset };
+      window.addEventListener('mousemove', this.onMiddlePanMove);
+      window.addEventListener('mouseup', this.onMiddlePanUp);
+      return;
+    }
     // Only start panning if clicking directly on the canvas background, not inside a chat node
     const target = event.target as HTMLElement;
     if (event.currentTarget === target && !target.closest('.chat-node')) {
@@ -283,6 +296,22 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
     this.isDragging = false;
     this.saveToSession();
   }
+
+  onMiddlePanMove = (event: MouseEvent) => {
+    if (this.isMiddlePanning) {
+      this.canvasOffset.x = this.middlePanOffsetStart.x + (event.clientX - this.middlePanStart.x);
+      this.canvasOffset.y = this.middlePanOffsetStart.y + (event.clientY - this.middlePanStart.y);
+    }
+  };
+
+  onMiddlePanUp = (_event: MouseEvent) => {
+    if (this.isMiddlePanning) {
+      this.isMiddlePanning = false;
+      window.removeEventListener('mousemove', this.onMiddlePanMove);
+      window.removeEventListener('mouseup', this.onMiddlePanUp);
+      this.saveToSession();
+    }
+  };
 
   onWheel(event: WheelEvent) {
     if (event.metaKey) { // Cmd (Mac) pressed
@@ -314,6 +343,16 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
   }
 
   onNodeMouseDown(event: MouseEvent, node: ChatNode) {
+    // Middle mouse panning (anywhere)
+    if (event.button === 1) {
+      event.preventDefault();
+      this.isMiddlePanning = true;
+      this.middlePanStart = { x: event.clientX, y: event.clientY };
+      this.middlePanOffsetStart = { ...this.canvasOffset };
+      window.addEventListener('mousemove', this.onMiddlePanMove);
+      window.addEventListener('mouseup', this.onMiddlePanUp);
+      return;
+    }
     if (event.button !== 0) return;
     const target = event.target as HTMLElement;
     if (target.classList.contains('resize-handle') ||
