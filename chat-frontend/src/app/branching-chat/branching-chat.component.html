@@ -1,8 +1,33 @@
 <div class="api-key-bar" style="position:fixed;top:0;left:0;width:100vw;z-index:2000;background:#fff;padding:8px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.07);display:flex;align-items:center;gap:12px;">
-  <label for="apiKeyInput">OpenAI API Key:</label>
-  <input id="apiKeyInput" [type]="showKey ? 'text' : 'password'" [(ngModel)]="apiKey" (ngModelChange)="setApiKey($event)" style="width:320px;" placeholder="sk-..." />
+  <label for="providerSelect">Provider:</label>
+  <select id="providerSelect" [(ngModel)]="provider" (ngModelChange)="setProvider($event)">
+    <option value="openai">OpenAI</option>
+    <option value="gemini">Gemini</option>
+  </select>
+  <ng-container *ngIf="provider === 'openai'">
+    <label for="apiKeyInput">OpenAI API Key:</label>
+    <input id="apiKeyInput" [type]="showKey ? 'text' : 'password'" [(ngModel)]="apiKey" (ngModelChange)="setApiKey($event)" style="width:320px;" placeholder="sk-..." />
+  </ng-container>
+  <ng-container *ngIf="provider === 'gemini'">
+    <label for="geminiKeyInput">Gemini API Key:</label>
+    <input id="geminiKeyInput" [type]="showKey ? 'text' : 'password'" [(ngModel)]="geminiApiKey" (ngModelChange)="setGeminiApiKey($event)" style="width:320px;" placeholder="AIza..." />
+    <label for="geminiVersionSelect">API Version:</label>
+    <select id="geminiVersionSelect" [(ngModel)]="geminiApiVersion" (ngModelChange)="setGeminiApiVersion($event)">
+      <option value="v1">v1</option>
+      <option value="v1beta">v1beta</option>
+    </select>
+    <label for="geminiModelSelect">Model:</label>
+    <select id="geminiModelSelect" [(ngModel)]="geminiModel" (ngModelChange)="setGeminiModel($event)">
+      <option value="gemini-2.0-flash">gemini-2.0-flash (fast, default)</option>
+      <option value="gemini-1.5-pro-latest">gemini-1.5-pro-latest (most capable)</option>
+      <option value="gemini-1.0-pro">gemini-1.0-pro</option>
+      <option value="custom">Custom...</option>
+    </select>
+    <input *ngIf="geminiModel === 'custom'" type="text" style="width:220px;" placeholder="Enter model name" (input)="setGeminiModel($any($event.target).value)" />
+  </ng-container>
   <button type="button" (click)="showKey = !showKey">{{ showKey ? 'Hide' : 'Show' }}</button>
-  <span *ngIf="!apiKey" style="color:#c00;font-weight:bold;">Please enter your OpenAI API key to use chat.</span>
+  <span *ngIf="provider === 'openai' && !apiKey" style="color:#c00;font-weight:bold;">Please enter your OpenAI API key to use chat.</span>
+  <span *ngIf="provider === 'gemini' && !geminiApiKey" style="color:#c00;font-weight:bold;">Please enter your Gemini API key to use chat.</span>
 </div>
 <div class="branching-chat-container" [style.marginTop.px]="48">
   <!-- Save/Load Controls -->

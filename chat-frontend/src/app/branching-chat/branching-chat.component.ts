@@ -84,6 +84,10 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
   middlePanOffsetStart = { x: 0, y: 0 };
   apiKey: string = '';
   showKey = false;
+  provider: 'openai' | 'gemini' = 'openai';
+  geminiApiKey: string = '';
+  geminiApiVersion: string = 'v1';
+  geminiModel: string = 'gemini-2.0-flash';
 
   constructor(
     private http: HttpClient,
@@ -106,6 +110,22 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
     const savedKey = sessionStorage.getItem('openai-api-key');
     if (savedKey) {
       this.apiKey = savedKey;
+    }
+    const savedGeminiKey = sessionStorage.getItem('gemini-api-key');
+    if (savedGeminiKey) {
+      this.geminiApiKey = savedGeminiKey;
+    }
+    const savedProvider = sessionStorage.getItem('chat-provider');
+    if (savedProvider === 'gemini' || savedProvider === 'openai') {
+      this.provider = savedProvider;
+    }
+    const savedGeminiVersion = sessionStorage.getItem('gemini-api-version');
+    if (savedGeminiVersion) {
+      this.geminiApiVersion = savedGeminiVersion;
+    }
+    const savedGeminiModel = sessionStorage.getItem('gemini-model');
+    if (savedGeminiModel) {
+      this.geminiModel = savedGeminiModel;
     }
     document.addEventListener('mousedown', this.handleGlobalClick, true);
   }
@@ -178,14 +198,30 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
     sessionStorage.setItem('openai-api-key', key);
   }
 
+  setProvider(provider: 'openai' | 'gemini') {
+    this.provider = provider;
+    sessionStorage.setItem('chat-provider', provider);
+  }
+
+  setGeminiApiKey(key: string) {
+    this.geminiApiKey = key;
+    sessionStorage.setItem('gemini-api-key', key);
+  }
+
+  setGeminiApiVersion(version: string) {
+    this.geminiApiVersion = version;
+    sessionStorage.setItem('gemini-api-version', version);
+  }
+
+  setGeminiModel(model: string) {
+    this.geminiModel = model;
+    sessionStorage.setItem('gemini-model', model);
+  }
+
   async sendMessage(node: ChatNode, event?: Event) {
     if (event && event instanceof KeyboardEvent && event.shiftKey) return;
     if (event) event.preventDefault();
     if (!node.input.trim() || !node.active || node.loading) return;
-    if (!this.apiKey) {
-      node.messages.push({ role: 'assistant', content: 'Please enter your OpenAI API key.' });
-      return;
-    }
     const message = node.input.trim();
     node.messages.push({ role: 'user', content: message });
     node.input = '';
@@ -206,30 +242,61 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
       context.push(...ancestor.messages);
     }
     context.push(...node.messages.slice(0, -1));
-    // Compose OpenAI API call
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
-          messages: [
-            ...context,
-            { role: 'user', content: message }
-          ],
-          temperature: 0.7
-        })
-      });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error?.message || response.statusText);
+      if (this.provider === 'openai') {
+        if (!this.apiKey) {
+          node.messages.push({ role: 'assistant', content: 'Please enter your OpenAI API key.' });
+          node.loading = false;
+          this.saveToSession();
+          return;
+        }
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiKey}`
+          },
+          body: JSON.stringify({
+            model: 'gpt-3.5-turbo',
+            messages: [
+              ...context,
+              { role: 'user', content: message }
+            ],
+            temperature: 0.7
+          })
+        });
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error?.message || response.statusText);
+        }
+        const data = await response.json();
+        const reply = data.choices?.[0]?.message?.content || '[No response]';
+        node.messages.push({ role: 'assistant', content: reply });
+      } else if (this.provider === 'gemini') {
+        if (!this.geminiApiKey) {
+          node.messages.push({ role: 'assistant', content: 'Please enter your Gemini API key.' });
+          node.loading = false;
+          this.saveToSession();
+          return;
+        }
+        const geminiContext = [
+          ...context.map(msg => ({ role: msg.role, parts: [{ text: msg.content }] })),
+          { role: 'user', parts: [{ text: message }] }
+        ];
+        const endpoint = `https://generativelanguage.googleapis.com/${this.geminiApiVersion}/models/${this.geminiModel}:generateContent?key=${this.geminiApiKey}`;
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: geminiContext })
+        });
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error?.message || response.statusText);
+        }
+        const data = await response.json();
+        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || '[No response]';
+        node.messages.push({ role: 'assistant', content: reply });
       }
-      const data = await response.json();
-      const reply = data.choices?.[0]?.message?.content || '[No response]';
-      node.messages.push({ role: 'assistant', content: reply });
       node.loading = false;
     } catch (err: any) {
       node.messages.push({ role: 'assistant', content: 'Error: ' + (err.message || 'Unknown error') });
