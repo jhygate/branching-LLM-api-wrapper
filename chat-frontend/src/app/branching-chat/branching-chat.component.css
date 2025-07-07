@@ -209,6 +209,7 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
+  margin-top: 60px; /* push below api-key-bar */
 }
 
 .zoom-btn {
@@ -442,6 +443,23 @@
   border: 4px solid red !important;
 }
 
+.api-key-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  max-width: 100vw;
+  z-index: 2000;
+  background: #fff;
+  padding: 8px 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 0 0 8px 8px;
+  opacity: 0.97;
+}
+
 .canvas-controls {
   position: fixed;
   top: 20px;
@@ -450,6 +468,7 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
+  margin-top: 60px; /* push below api-key-bar */
 }
 
 .canvas-btn {
