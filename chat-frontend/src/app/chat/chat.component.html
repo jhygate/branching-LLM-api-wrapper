@@ -1,11 +1,19 @@
 <p>Chat component loaded!</p>
 <div class="chat-window">
-  <div *ngFor="let msg of messages">
-    <b *ngIf="msg.role === 'user'">You:</b>
-    <b *ngIf="msg.role === 'assistant'">GPT:</b>
-    {{msg.content}}
-  </div>
-  <div *ngIf="loading">GPT is typing...</div>
+  @for (msg of messages; track $index) {
+    <div>
+      @if (msg.role === 'user') {
+        <b>You:</b>
+      }
+      @if (msg.role === 'assistant') {
+        <b>GPT:</b>
+      }
+      {{msg.content}}
+    </div>
+  }
+  @if (loading) {
+    <div>GPT is typing...</div>
+  }
 </div>
 <input [(ngModel)]="userInput" (keyup.enter)="sendMessage()" placeholder="Type your message..." />
 <button (click)="sendMessage()">Send</button>
