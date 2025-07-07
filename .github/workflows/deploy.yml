@@ -31,4 +31,4 @@ jobs:
           external_repository: jhygate/jhygate.github.io
           publish_branch: main    # or `gh-pages`, depending on that repo’s pages branch
           publish_dir: chat-frontend/dist/chat-frontend
-          github_token: ${{ secrets.GH_PAGES_TOKEN }}
+          personal_token: ${{ secrets.GH_PAGES_TOKEN }}
