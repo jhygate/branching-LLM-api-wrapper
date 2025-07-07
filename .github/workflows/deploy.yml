@@ -1,34 +1,48 @@
-name: Deploy Chat Frontend
+name: Build and Deploy Angular to Pages Repo Subfolder
 
 on:
   push:
-    branches: [main]              # or whichever branch you want to publish from
+    branches: [main]
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source
+      - name: Checkout source repo
         uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'      # pick the Node version for the project
+          node-version: '18'
 
       - name: Install dependencies
         run: npm ci
         working-directory: chat-frontend
 
       - name: Build Angular app
-        run: npm run build -- --configuration production
+        run: npm run build -- --configuration production --base-href /chat-frontend/
         working-directory: chat-frontend
 
-      - name: Deploy to GitHub Pages repo
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          external_repository: jhygate/jhygate.github.io
-          publish_branch: main    # or `gh-pages`, depending on that repo’s pages branch
-          publish_dir: chat-frontend/dist/chat-frontend/browser
-          personal_token: ${{ secrets.GH_PAGES_TOKEN }}
+      - name: Clone GitHub Pages repo
+        run: |
+          git clone https://x-access-token:${{ secrets.GH_PAGES_TOKEN }}@github.com/jhygate/jhygate.github.io.git gh-pages
+          ls gh-pages
+        env:
+          GH_PAGES_TOKEN: ${{ secrets.GH_PAGES_TOKEN }}
+
+      - name: Copy build to subfolder in gh-pages repo
+        run: |
+          rm -rf gh-pages/chat-frontend
+          mkdir -p gh-pages/chat-frontend
+          cp -r chat-frontend/dist/chat-frontend/browser/* gh-pages/chat-frontend/
+
+      - name: Commit and push to gh-pages
+        run: |
+          cd gh-pages
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add chat-frontend
+          git commit -m "Deploy chat-frontend from $GITHUB_REPOSITORY@$GITHUB_SHA" || echo "Nothing to commit"
+          git push
