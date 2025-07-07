@@ -11,6 +11,7 @@ import bash from 'highlight.js/lib/languages/bash';
 import 'highlight.js/styles/github-dark.css';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { marked } from 'marked';
+import { HttpClientModule } from '@angular/common/http';
 
 hljs.registerLanguage('javascript', javascript);
 hljs.registerLanguage('python', python);
@@ -56,7 +57,7 @@ interface ChatNode {
 @Component({
   selector: 'app-branching-chat',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, HttpClientModule],
   templateUrl: './branching-chat.component.html',
   styleUrls: ['./branching-chat.component.css']
 })
