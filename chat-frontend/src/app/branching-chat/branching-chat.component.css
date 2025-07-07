@@ -195,7 +195,7 @@
   width: 100vw;
   height: 100vh;
   overflow: visible;
-  background: #f5f5f5;
+  background: transparent;
   margin: 0;
   padding: 0;
   z-index: 1000;
@@ -240,7 +240,7 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: #f5f5f5;
+  background: transparent;
   z-index: 0;
   pointer-events: none;
 }
@@ -255,9 +255,12 @@
   user-select: none;
   margin: 0;
   padding: 0;
-  background: yellow;
-  border: 6px solid blue;
-  background-image: repeating-radial-gradient(circle, #bbb 1px, transparent 2px 40px);
+  background: #f4f6fa;
+  border: 4px solid #888;
+  /* 10x bigger dots and spacing, both scale with zoom */
+  background-image: radial-gradient(#bfc7d1 12px, transparent 0);
+  background-size: calc(240px * var(--canvas-zoom, 1)) calc(240px * var(--canvas-zoom, 1));
+  background-position: 0 0;
   box-sizing: border-box;
   z-index: 2;
 }
@@ -509,7 +512,7 @@
   text-decoration: none !important;
 }
 
-.canvas-center-dot {
+/* .canvas-center-dot {
   position: absolute;
   left: 0;
   top: 0;
@@ -520,5 +523,5 @@
   z-index: 100;
   transform: translate(-4px, -4px);
   pointer-events: none;
-}
+} */
 
