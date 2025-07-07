@@ -89,6 +89,7 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
   geminiApiKey: string = '';
   geminiApiVersion: string = 'v1';
   geminiModel: string = 'gemini-2.0-flash';
+  lastFileName: string = 'canvas.json';
 
   constructor(
     private http: HttpClient,
@@ -621,7 +622,7 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
     this.saveToSession();
   }
 
-  saveCanvas() {
+  async saveCanvas() {
     // Save nodes as a plain object with children as arrays of child IDs
     const nodesToSave: any = {};
     for (const [id, node] of Object.entries(this.nodes)) {
@@ -636,9 +637,34 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
       canvasOffset: this.canvasOffset,
       zoom: this.zoom
     };
-    let fileName = window.prompt('Enter file name to save:', 'canvas.json') || 'canvas.json';
+    const json = JSON.stringify(data, null, 2);
+
+    // Try File System Access API
+    if ('showSaveFilePicker' in window) {
+      try {
+        // @ts-ignore
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: this.lastFileName || 'canvas.json',
+          types: [{
+            description: 'JSON Files',
+            accept: { 'application/json': ['.json'] }
+          }]
+        });
+        const writable = await handle.createWritable();
+        await writable.write(json);
+        await writable.close();
+        this.lastFileName = handle.name || this.lastFileName;
+        return;
+      } catch (e) {
+        // User cancelled or error, fallback to download
+      }
+    }
+
+    // Fallback: download as before
+    let fileName = window.prompt('Enter file name to save:', this.lastFileName || 'canvas.json') || this.lastFileName || 'canvas.json';
     if (!fileName.endsWith('.json')) fileName += '.json';
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    this.lastFileName = fileName;
+    const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -653,6 +679,7 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
     const file = input.files[0];
+    this.lastFileName = file.name;
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
