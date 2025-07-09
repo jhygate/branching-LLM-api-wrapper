@@ -595,6 +595,7 @@ export class BranchingChatComponent implements OnInit, AfterViewChecked {
     this.finishEditing();
     if (event) event.preventDefault();
   }
+  
 
   deleteNode(node: ChatNode) {
     if (!window.confirm('Delete this node and all its children?')) return;
